@@ -1,0 +1,36 @@
+# Environment
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Pipeline outputs (generated at runtime)
+outputs/reports/*
+outputs/plans/*
+outputs/generated_code/*
+outputs/pipeline_state.json
+!outputs/reports/.gitkeep
+!outputs/plans/.gitkeep
+!outputs/generated_code/.gitkeep
+
+# IDE
+.vscode/
+.idea/
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db
