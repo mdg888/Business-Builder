@@ -38,7 +38,7 @@ def _print_warnings(warnings: list[str]) -> None:
     if not warnings:
         print(f"{GREEN}No warnings.{RESET}\n")
         return
-    print(f"{YELLOW}{BOLD}⚠  WARNINGS ({len(warnings)}){RESET}")
+    print(f"{YELLOW}{BOLD}!! WARNINGS ({len(warnings)}){RESET}")
     for w in warnings:
         print(f"{YELLOW}  ! {w}{RESET}")
     print()
@@ -50,12 +50,12 @@ def run_approval_gate(
     _print_output_summary(phase_name, output)
     _print_warnings(warnings)
 
-    print(f"{BOLD}{'─' * 60}{RESET}")
-    print(f"{BOLD}HUMAN GATE — {phase_name.upper()}{RESET}")
+    print(f"{BOLD}{'-' * 60}{RESET}")
+    print(f"{BOLD}HUMAN GATE -- {phase_name.upper()}{RESET}")
     print("Options:")
     print("  [a] Approve and continue")
     print("  [r] Reject and re-run this phase with feedback")
-    print(f"{BOLD}{'─' * 60}{RESET}\n")
+    print(f"{BOLD}{'-' * 60}{RESET}\n")
 
     while True:
         choice = input("Your decision (a/r): ").strip().lower()
