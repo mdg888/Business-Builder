@@ -1,1 +1,189 @@
 # Task definitions for Business Builder pipeline.
+
+research_task:
+  agent: research_agent
+  description: >
+    You are given the following business idea and brief:
+
+    {user_brief}
+
+    Your job is to produce a thorough market research report. Complete all of the following:
+
+    1. DEMAND VALIDATION: Search for evidence of real demand — look for existing communities,
+       subreddits, forums, job postings, or search trends that signal people are paying for
+       solutions to this problem today. Note the strength of demand signal.
+
+    2. COMPETITOR ANALYSIS: Identify at least 3 direct competitors. For each, record their
+       name, current pricing model, and primary differentiator. Use the search and scraper
+       tools to pull live data where possible.
+
+    3. TAM/SAM/SOM ESTIMATION: Estimate Total Addressable Market, Serviceable Addressable
+       Market, and Serviceable Obtainable Market. Show your assumptions and data sources.
+       Express values in USD.
+
+    4. CUSTOMER PERSONAS: Build 2-3 customer personas. Each persona needs a name, a 1-2
+       sentence description, a list of specific pain points, and a realistic willingness-to-pay
+       figure with justification.
+
+    5. PRICING BENCHMARKS: Summarise what comparable products charge and what the market
+       will bear for this category.
+
+    6. RISKS: List the top 3-5 risks that could prevent this business from succeeding.
+       Be specific — not generic risks like "competition", but risks specific to this idea.
+
+    7. GO/NO-GO RECOMMENDATION: Based on your findings, give a clear Go or No-Go
+       recommendation with a 1-paragraph rationale.
+
+    8. CONFIDENCE SCORE: Assign a confidence score between 0.0 and 1.0 reflecting how
+       well-evidenced your findings are. If below 0.7, explain what data was unavailable.
+
+    9. SUMMARY: Write a summary of your findings in 500 tokens or fewer. This summary
+       will be passed to the Strategy Agent — include the key facts they need to build
+       a business model: market size, top competitors, best-fit persona, and pricing range.
+
+    Output must be valid JSON matching the ResearchOutput schema.
+  expected_output: >
+    A JSON object matching the ResearchOutput schema with fields: selected_business_idea,
+    competitor_summary (list of Competitor objects with name/pricing/differentiation),
+    personas (list of Persona objects with name/description/pain_points/willingness_to_pay),
+    pricing_summary, tam_sam_som (dict with TAM/SAM/SOM keys), risks (list of strings),
+    go_no_go_recommendation, confidence (float 0-1), summary (≤500 tokens).
+
+strategy_task:
+  agent: strategy_agent
+  description: >
+    You are given the following approved research summary from Phase 1:
+
+    {research_summary}
+
+    The original business brief was: {user_brief}
+
+    Build a complete business strategy. Complete all of the following:
+
+    1. REVENUE MODEL: Define the primary revenue model (subscription, one-time, usage-based,
+       marketplace, etc.). Justify the choice based on the personas and pricing data in the
+       research summary.
+
+    2. PRICING STRATEGY: Define specific pricing tiers or price points. Each price point must
+       reference the willingness-to-pay data from the research summary. Do not invent figures
+       that contradict the research.
+
+    3. ACQUISITION CHANNELS: List 3-5 customer acquisition channels ranked by expected
+       CAC efficiency. For each channel, estimate relative CAC (low/medium/high) and explain
+       the rationale.
+
+    4. LAUNCH PLAN: Write a phased launch plan (pre-launch, soft launch, growth phase).
+       Include specific actions, not generic advice.
+
+    5. FINANCIAL ESTIMATES: Produce estimates for: monthly revenue at 100/500/1000 customers,
+       estimated CAC per primary channel, estimated LTV based on pricing and churn assumptions,
+       and approximate break-even timeline in months. All figures must reference SOM from
+       the research summary. If break-even exceeds 36 months, flag this explicitly.
+
+    6. CONFIDENCE SCORE: Assign a confidence score 0.0-1.0 for the financial assumptions.
+       If below 0.7, explain the uncertainty.
+
+    7. SUMMARY: Write a summary in 500 tokens or fewer for the Product Agent. Include:
+       revenue model, primary pricing tier, top acquisition channel, and key financial
+       constraints they should be aware of when scoping the MVP.
+
+    Output must be valid JSON matching the StrategyOutput schema.
+  expected_output: >
+    A JSON object matching the StrategyOutput schema with fields: revenue_model,
+    pricing_strategy, acquisition_channels (list of strings), launch_plan,
+    financial_estimates (dict with revenue_scenarios/CAC/LTV/break_even_months keys),
+    confidence (float 0-1), summary (≤500 tokens).
+
+product_task:
+  agent: product_agent
+  description: >
+    You are given the following approved strategy summary from Phase 2:
+
+    {strategy_summary}
+
+    The original business brief was: {user_brief}
+
+    Define the MVP using MoSCoW prioritisation and produce a complete product plan.
+    Complete all of the following:
+
+    1. MUST-HAVE FEATURES: List the features without which the product cannot launch.
+       Keep this list ruthlessly short — if the product can launch without it, it is not
+       a Must Have. Aim for 4-6 features maximum.
+
+    2. SHOULD-HAVE FEATURES: List features that are important but not launch-blocking.
+       These are candidates for the first post-launch sprint.
+
+    3. USER STORIES: Write one user story per Must-Have feature in the format:
+       "As a [persona], I want to [action] so that [outcome]."
+       Use the personas from the research phase where relevant.
+
+    4. TECH STACK: Recommend a specific tech stack for this MVP. For each layer
+       (frontend, backend, database, auth, hosting, payments if needed), name the
+       specific technology and justify the choice in one sentence based on the
+       product requirements and team constraints implied by the brief.
+
+    5. BUILD SCOPE ESTIMATE: Estimate total build time in weeks for a solo developer
+       or small team (2-3 people). Break it down by major workstream. If total exceeds
+       12 weeks, flag feature creep and identify what to cut.
+
+    6. CONFIDENCE SCORE: Assign a confidence score 0.0-1.0 for the scope estimate.
+
+    7. SUMMARY: Write a summary in 500 tokens or fewer for the Execution Agent. Include:
+       the must-have feature list, chosen tech stack, and any hard constraints they must
+       respect when generating the starter code and documentation.
+
+    Output must be valid JSON matching the ProductOutput schema.
+  expected_output: >
+    A JSON object matching the ProductOutput schema with fields: must_have_features
+    (list of strings, max 8), should_have_features (list of strings), user_stories
+    (list of strings), tech_stack (dict keyed by layer), estimated_build_scope (string),
+    confidence (float 0-1), summary (≤500 tokens).
+
+execution_task:
+  agent: execution_agent
+  description: >
+    You are given the following approved product summary from Phase 3:
+
+    {product_summary}
+
+    The original business brief was: {user_brief}
+
+    Generate all launch-ready artifacts. Complete all of the following:
+
+    1. BUSINESS PLAN DOCUMENT: Write a structured business plan covering: executive summary,
+       problem/solution, market opportunity, business model, GTM strategy, and financial
+       projections. Save to outputs/reports/business_plan.md.
+
+    2. LANDING PAGE COPY: Write headline, subheadline, 3 feature/benefit blocks, social
+       proof placeholder, and a primary CTA. Optimise for the primary persona from the
+       research phase. Save to outputs/plans/landing_page_copy.md.
+
+    3. PITCH DECK COPY: Write slide-by-slide content for a 10-slide pitch deck
+       (Problem, Solution, Market, Product, Traction, Business Model, GTM, Team placeholder,
+       Financials, Ask). Save to outputs/plans/pitch_deck_copy.md.
+
+    4. BRAND GUIDELINES: Define brand name suggestion, tone of voice (3 adjectives + explanation),
+       colour palette suggestion (primary/secondary/accent with hex codes), and typography
+       recommendation. Save to outputs/plans/brand_guidelines.md.
+
+    5. STARTER REPO STRUCTURE: Generate a starter directory structure appropriate for the
+       tech stack from the product summary. Include placeholder files with brief comments
+       explaining each file's purpose. Use the code scaffold tool.
+
+    6. DEPLOYMENT GUIDE: Write step-by-step deployment instructions for the recommended
+       hosting platform from the tech stack. Include environment variable setup, first deploy
+       steps, and post-deploy checklist. Save to outputs/reports/deployment_guide.md.
+
+    7. LAUNCH CHECKLIST: Write a pre-launch checklist covering: legal (T&Cs, privacy policy),
+       payments setup, analytics, error monitoring, and go-live steps. Save to
+       outputs/plans/launch_checklist.md.
+
+    IMPORTANT CONSTRAINTS: Do NOT include instructions for autonomous deployment, live payment
+    configuration, or any action that spends money or goes live without human review.
+    Every artifact must be a template or guide that a human acts on — not an automated execution.
+
+    Output must be valid JSON matching the ExecutionOutput schema.
+  expected_output: >
+    A JSON object matching the ExecutionOutput schema with fields: generated_documents
+    (list of file paths written), starter_repo_structure (dict of folder/file structure),
+    deployment_guide (string summary), launch_assets (list of asset descriptions).
