@@ -41,7 +41,7 @@ def _preprocess_brief(raw_input: str) -> dict:
     from langchain_anthropic import ChatAnthropic
 
     llm = ChatAnthropic(
-        model="claude-sonnet-4-20250514",
+        model="claude-sonnet-4-5",
         anthropic_api_key=os.environ["ANTHROPIC_API_KEY"],
         max_tokens=512,
     )

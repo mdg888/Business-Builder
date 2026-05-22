@@ -139,7 +139,7 @@ product_task:
     (list of strings), tech_stack (dict keyed by layer), estimated_build_scope (string),
     confidence (float 0-1), summary (≤500 tokens).
 
-execution_task:
+execution_task_business_plan:
   agent: execution_agent
   description: >
     You are given the following approved product summary from Phase 3:
@@ -148,42 +148,148 @@ execution_task:
 
     The original business brief was: {user_brief}
 
-    Generate all launch-ready artifacts. Complete all of the following:
+    YOUR ONLY JOB IN THIS TASK: Write a structured business plan as markdown.
 
-    1. BUSINESS PLAN DOCUMENT: Write a structured business plan covering: executive summary,
-       problem/solution, market opportunity, business model, GTM strategy, and financial
-       projections. Save to outputs/reports/business_plan.md.
-
-    2. LANDING PAGE COPY: Write headline, subheadline, 3 feature/benefit blocks, social
-       proof placeholder, and a primary CTA. Optimise for the primary persona from the
-       research phase. Save to outputs/plans/landing_page_copy.md.
-
-    3. PITCH DECK COPY: Write slide-by-slide content for a 10-slide pitch deck
-       (Problem, Solution, Market, Product, Traction, Business Model, GTM, Team placeholder,
-       Financials, Ask). Save to outputs/plans/pitch_deck_copy.md.
-
-    4. BRAND GUIDELINES: Define brand name suggestion, tone of voice (3 adjectives + explanation),
-       colour palette suggestion (primary/secondary/accent with hex codes), and typography
-       recommendation. Save to outputs/plans/brand_guidelines.md.
-
-    5. STARTER REPO STRUCTURE: Generate a starter directory structure appropriate for the
-       tech stack from the product summary. Include placeholder files with brief comments
-       explaining each file's purpose. Use the code scaffold tool.
-
-    6. DEPLOYMENT GUIDE: Write step-by-step deployment instructions for the recommended
-       hosting platform from the tech stack. Include environment variable setup, first deploy
-       steps, and post-deploy checklist. Save to outputs/reports/deployment_guide.md.
-
-    7. LAUNCH CHECKLIST: Write a pre-launch checklist covering: legal (T&Cs, privacy policy),
-       payments setup, analytics, error monitoring, and go-live steps. Save to
-       outputs/plans/launch_checklist.md.
+    Include these sections: Executive Summary, Problem & Solution, Market Opportunity,
+    Business Model, GTM Strategy, and Financial Projections.
 
     IMPORTANT CONSTRAINTS: Do NOT include instructions for autonomous deployment, live payment
     configuration, or any action that spends money or goes live without human review.
-    Every artifact must be a template or guide that a human acts on — not an automated execution.
+    Keep output under 800 words.
 
-    Output must be valid JSON matching the ExecutionOutput schema.
+    Return ONLY the full markdown content of the business plan. No commentary, no preamble.
   expected_output: >
-    A JSON object matching the ExecutionOutput schema with fields: generated_documents
-    (list of file paths written), starter_repo_structure (dict of folder/file structure),
-    deployment_guide (string summary), launch_assets (list of asset descriptions).
+    Full markdown content of the business plan document (under 800 words).
+
+execution_task_marketing_landing:
+  agent: execution_agent
+  description: >
+    You are given the following approved product summary from Phase 3:
+
+    {product_summary}
+
+    The original business brief was: {user_brief}
+
+    YOUR ONLY JOB IN THIS TASK: Write landing page copy as markdown.
+
+    Include: headline, subheadline, 3 feature/benefit blocks, social proof placeholder,
+    and a primary CTA. Optimise for the primary persona from the product summary.
+
+    Keep output under 800 words.
+    Return ONLY the full markdown content of the landing page copy. No commentary, no preamble.
+  expected_output: >
+    Full markdown content of the landing page copy (under 800 words).
+
+execution_task_marketing_pitch:
+  agent: execution_agent
+  description: >
+    You are given the following approved product summary from Phase 3:
+
+    {product_summary}
+
+    The original business brief was: {user_brief}
+
+    YOUR ONLY JOB IN THIS TASK: Write pitch deck copy as markdown.
+
+    Write slide-by-slide content for a 10-slide pitch deck covering: Problem, Solution,
+    Market, Product, Traction, Business Model, GTM, Team (placeholder), Financials, Ask.
+
+    Keep output under 800 words.
+    Return ONLY the full markdown content of the pitch deck copy. No commentary, no preamble.
+  expected_output: >
+    Full markdown content of the pitch deck copy (under 800 words).
+
+execution_task_marketing_brand:
+  agent: execution_agent
+  description: >
+    You are given the following approved product summary from Phase 3:
+
+    {product_summary}
+
+    The original business brief was: {user_brief}
+
+    YOUR ONLY JOB IN THIS TASK: Write brand guidelines as markdown.
+
+    Include: brand name suggestion, tone of voice (3 adjectives + explanation), colour palette
+    (primary/secondary/accent with hex codes), and typography recommendation.
+
+    Keep output under 800 words.
+    Return ONLY the full markdown content of the brand guidelines. No commentary, no preamble.
+  expected_output: >
+    Full markdown content of the brand guidelines (under 800 words).
+
+execution_task_launch:
+  agent: execution_agent
+  description: >
+    You are given the following approved product summary from Phase 3:
+
+    {product_summary}
+
+    The original business brief was: {user_brief}
+
+    YOUR ONLY JOB IN THIS TASK: Write a pre-launch checklist as markdown.
+
+    Cover: legal (T&Cs, privacy policy), payments setup, analytics, error monitoring,
+    and go-live steps.
+
+    IMPORTANT CONSTRAINTS: Do NOT include instructions for autonomous deployment, live payment
+    configuration, or any action that spends money or goes live without human review.
+    Keep output under 800 words.
+
+    Return ONLY the full markdown content of the launch checklist. No commentary, no preamble.
+  expected_output: >
+    Full markdown content of the launch checklist (under 800 words).
+
+execution_task_deployment:
+  agent: execution_agent
+  description: >
+    You are given the following approved product summary from Phase 3:
+
+    {product_summary}
+
+    The original business brief was: {user_brief}
+
+    YOUR ONLY JOB IN THIS TASK: Write a deployment guide as markdown.
+
+    Write step-by-step deployment instructions for the recommended hosting platform from
+    the tech stack. Include environment variable setup, first deploy steps, and a
+    post-deploy checklist.
+
+    IMPORTANT CONSTRAINTS: Do NOT include instructions for autonomous deployment, live payment
+    configuration, or any action that spends money or goes live without human review.
+    Keep output under 800 words.
+
+    Return ONLY the full markdown content of the deployment guide. No commentary, no preamble.
+  expected_output: >
+    Full markdown content of the deployment guide (under 800 words).
+
+execution_task_code_scaffold:
+  agent: execution_agent
+  description: >
+    You are given the following approved product summary from Phase 3:
+
+    {product_summary}
+
+    The original business brief was: {user_brief}
+
+    YOUR ONLY JOB IN THIS TASK: Generate the starter repository structure using code_scaffold_tool.
+
+    Generate a starter directory structure appropriate for the tech stack described in the
+    product summary. Include placeholder files with brief comments explaining each file's purpose.
+
+    You MUST call code_scaffold_tool with BOTH of these arguments every time:
+      - repo_name: a snake_case name derived from the business idea (no spaces)
+      - structure: a JSON string mapping relative file paths to their contents
+
+    Example call (do not omit either argument):
+      repo_name: "my_app"
+      structure: '{"README.md": "# My App", "src/main.py": "# entrypoint", "src/models.py": "# data models", "requirements.txt": "fastapi"}'
+
+    Build a realistic structure for the chosen tech stack — at minimum include a README,
+    entry point, and one file per major layer (e.g. routes, models, config).
+
+    When done, confirm the scaffold was generated successfully and list the top-level
+    directories created.
+  expected_output: >
+    Confirmation that the starter repo was scaffolded under outputs/generated_code/,
+    with a list of the top-level directories and files created.

@@ -6,9 +6,9 @@ from typing import Any
 
 import yaml
 from crewai import Agent, Crew, Process, Task
+from crewai.llm import LLM
 from crewai_tools import ScrapeWebsiteTool
 from dotenv import load_dotenv
-from langchain_anthropic import ChatAnthropic
 
 from guardrails.approvals import run_approval_gate
 from guardrails.schemas import (
@@ -44,15 +44,15 @@ def _load_yaml(filename: str) -> dict:
         return yaml.safe_load(f)
 
 
-def _make_llm() -> ChatAnthropic:
-    return ChatAnthropic(
-        model="claude-sonnet-4-20250514",
-        anthropic_api_key=os.environ["ANTHROPIC_API_KEY"],
-        max_tokens=8096,
+def _make_llm(max_tokens: int = 4096) -> LLM:
+    return LLM(
+        model="anthropic/claude-sonnet-4-5",
+        api_key=os.environ["ANTHROPIC_API_KEY"],
+        max_tokens=max_tokens,
     )
 
 
-def _build_agent(name: str, cfg: dict, tools: list) -> Agent:
+def _build_agent(name: str, cfg: dict, tools: list, max_tokens: int = 4096) -> Agent:
     return Agent(
         role=cfg["role"],
         goal=cfg["goal"],
@@ -60,7 +60,7 @@ def _build_agent(name: str, cfg: dict, tools: list) -> Agent:
         verbose=cfg.get("verbose", True),
         allow_delegation=cfg.get("allow_delegation", False),
         tools=tools,
-        llm=_make_llm(),
+        llm=_make_llm(max_tokens=max_tokens),
     )
 
 
@@ -103,7 +103,15 @@ class BusinessBuilderCrew:
         self.execution_agent = _build_agent(
             "execution_agent",
             self._agents_cfg["execution_agent"],
-            tools=[file_tool, code_scaffold_tool],
+            tools=[code_scaffold_tool],
+        )
+
+    def _make_execution_agent(self, max_tokens: int = 4096) -> Agent:
+        return _build_agent(
+            "execution_agent",
+            self._agents_cfg["execution_agent"],
+            tools=[code_scaffold_tool],
+            max_tokens=max_tokens,
         )
 
     # ------------------------------------------------------------------
@@ -114,7 +122,23 @@ class BusinessBuilderCrew:
         task = _build_task(task_cfg, agent, description_override=description)
         crew = Crew(agents=[agent], tasks=[task], process=Process.sequential, verbose=True)
         result = crew.kickoff()
-        return result.raw if hasattr(result, "raw") else str(result)
+
+        # Extract raw text — try multiple attributes CrewAI uses across versions
+        raw = None
+        for attr in ("raw", "output", "result"):
+            val = getattr(result, attr, None)
+            if val and str(val).strip():
+                raw = str(val).strip()
+                break
+        if not raw:
+            raw = str(result).strip()
+
+        if not raw:
+            print(f"{YELLOW}Warning: agent returned empty output.{RESET}")
+            return ""
+
+        print(f"\n{BOLD}Raw agent output ({len(raw)} chars):{RESET}\n{raw[:500]}{'...' if len(raw) > 500 else ''}\n")
+        return raw
 
     def _run_phase_with_gate(
         self,
@@ -242,21 +266,71 @@ class BusinessBuilderCrew:
             self.state.save_state()
             print(f"{GREEN}Phase 3 complete. State saved.{RESET}")
 
-        # ── Phase 4: Execution (no gate) ───────────────────────────────
+        # ── Phase 4: Execution (no gate, split into sub-tasks) ────────
         if self.state.current_phase == "execution":
-            execution_description = self._tasks_cfg["execution_task"]["description"].format(
-                user_brief=brief,
-                product_summary=self.state.product_output.summary,
+            ctx = dict(user_brief=brief, product_summary=self.state.product_output.summary)
+            outputs_dir = os.path.join(os.path.dirname(__file__), "outputs")
+
+            # Each entry: (task_key, output filepath or None for scaffold)
+            sub_tasks = [
+                ("execution_task_business_plan", "reports/business_plan.md"),
+                ("execution_task_marketing_landing", "plans/landing_page_copy.md"),
+                ("execution_task_marketing_pitch", "plans/pitch_deck_copy.md"),
+                ("execution_task_marketing_brand", "plans/brand_guidelines.md"),
+                ("execution_task_launch", "plans/launch_checklist.md"),
+                ("execution_task_deployment", "reports/deployment_guide.md"),
+                ("execution_task_code_scaffold", None),
+            ]
+
+            sub_results: list[str] = []
+            failures: list[str] = []
+            for task_key, out_path in sub_tasks:
+                if task_key in self.state.completed_subtasks:
+                    print(f"\n{CYAN}Skipping completed sub-task: {task_key}{RESET}")
+                    sub_results.append("")
+                    continue
+
+                print(f"\n{BOLD}--- Execution sub-task: {task_key} ---{RESET}\n")
+                is_scaffold = out_path is None
+                agent = self._make_execution_agent(max_tokens=2048 if is_scaffold else 4096)
+                try:
+                    description = self._tasks_cfg[task_key]["description"].format(**ctx)
+                    raw = self._run_single_task(agent, self._tasks_cfg[task_key], description)
+                    sub_results.append(raw)
+
+                    # Write text output directly to disk (skip scaffold — tool handles that)
+                    if out_path and raw:
+                        full_path = os.path.join(outputs_dir, out_path)
+                        os.makedirs(os.path.dirname(full_path), exist_ok=True)
+                        with open(full_path, "w", encoding="utf-8") as f:
+                            f.write(raw)
+                        print(f"{GREEN}Saved: {full_path}{RESET}")
+
+                    self.state.completed_subtasks.append(task_key)
+                    self.state.save_state()
+                    print(f"{GREEN}Checkpoint saved: {task_key}{RESET}")
+                except Exception as e:
+                    print(f"\n{RED}Sub-task {task_key} failed: {e}{RESET}")
+                    failures.append(task_key)
+                    sub_results.append("")
+                    continue
+
+            if failures:
+                print(f"\n{YELLOW}{BOLD}Warning: {len(failures)} sub-task(s) failed: {', '.join(failures)}{RESET}")
+
+            generated_documents = [p for _, p in sub_tasks if p]
+            execution_output = ExecutionOutput(
+                generated_documents=generated_documents,
+                starter_repo_structure={"generated": "see outputs/generated_code/"},
+                deployment_guide=sub_results[-2][:500] if len(sub_results) >= 2 else "",
+                launch_assets=[
+                    "Landing page copy",
+                    "Pitch deck copy",
+                    "Brand guidelines",
+                    "Launch checklist",
+                ],
             )
-            execution_output = self._run_phase_with_gate(
-                phase_name="Execution",
-                agent=self.execution_agent,
-                task_key="execution_task",
-                description=execution_description,
-                schema_class=ExecutionOutput,
-                validator=lambda _: [],  # no guardrail checks on execution output
-                has_gate=False,
-            )
+
             self.state.execution_output = execution_output
             self.state.phase_history.append({"phase": "execution", "status": "complete"})
             self.state.current_phase = "done"

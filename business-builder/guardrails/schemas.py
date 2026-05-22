@@ -1,6 +1,15 @@
 """Pydantic models: Competitor, Persona, ResearchOutput, StrategyOutput, ProductOutput, ExecutionOutput."""
 
-from pydantic import BaseModel, Field
+import json
+
+from pydantic import BaseModel, Field, field_validator
+
+
+def _coerce_to_str(v) -> str:
+    """Coerce dicts/lists returned by the LLM into a JSON string."""
+    if isinstance(v, str):
+        return v
+    return json.dumps(v)
 
 
 class Competitor(BaseModel):
@@ -36,6 +45,18 @@ class StrategyOutput(BaseModel):
     financial_estimates: dict
     confidence: float = Field(ge=0.0, le=1.0)
     summary: str
+
+    @field_validator("revenue_model", "pricing_strategy", "launch_plan", "summary", mode="before")
+    @classmethod
+    def coerce_str_fields(cls, v) -> str:
+        return _coerce_to_str(v)
+
+    @field_validator("acquisition_channels", mode="before")
+    @classmethod
+    def coerce_channels(cls, v) -> list[str]:
+        if isinstance(v, list):
+            return [_coerce_to_str(item) for item in v]
+        return [_coerce_to_str(v)]
 
 
 class ProductOutput(BaseModel):

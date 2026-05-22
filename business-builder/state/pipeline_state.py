@@ -30,6 +30,7 @@ class PipelineState:
     phase_history: list[dict] = field(default_factory=list)
     human_decisions: dict = field(default_factory=dict)
     warnings: list[str] = field(default_factory=list)
+    completed_subtasks: list[str] = field(default_factory=list)
 
     def save_state(self) -> str:
         os.makedirs(OUTPUTS_DIR, exist_ok=True)
@@ -40,6 +41,7 @@ class PipelineState:
             "phase_history": self.phase_history,
             "human_decisions": self.human_decisions,
             "warnings": self.warnings,
+            "completed_subtasks": self.completed_subtasks,
             "research_output": self.research_output.model_dump() if self.research_output else None,
             "strategy_output": self.strategy_output.model_dump() if self.strategy_output else None,
             "product_output": self.product_output.model_dump() if self.product_output else None,
@@ -60,6 +62,7 @@ class PipelineState:
             phase_history=data.get("phase_history", []),
             human_decisions=data.get("human_decisions", {}),
             warnings=data.get("warnings", []),
+            completed_subtasks=data.get("completed_subtasks", []),
             research_output=ResearchOutput(**data["research_output"]) if data.get("research_output") else None,
             strategy_output=StrategyOutput(**data["strategy_output"]) if data.get("strategy_output") else None,
             product_output=ProductOutput(**data["product_output"]) if data.get("product_output") else None,
