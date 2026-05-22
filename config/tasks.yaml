@@ -279,11 +279,11 @@ execution_task_code_scaffold:
 
     You MUST call code_scaffold_tool with BOTH of these arguments every time:
       - repo_name: a snake_case name derived from the business idea (no spaces)
-      - structure: a JSON string mapping relative file paths to their contents
+      - structure: a JSON object (not a string) mapping relative file paths to their contents
 
     Example call (do not omit either argument):
       repo_name: "my_app"
-      structure: '{"README.md": "# My App", "src/main.py": "# entrypoint", "src/models.py": "# data models", "requirements.txt": "fastapi"}'
+      structure: {{"README.md": "# My App", "src/main.py": "# entrypoint", "src/models.py": "# data models", "requirements.txt": "fastapi"}}
 
     Build a realistic structure for the chosen tech stack — at minimum include a README,
     entry point, and one file per major layer (e.g. routes, models, config).

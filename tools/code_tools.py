@@ -1,38 +1,58 @@
 """Code scaffold tool — creates starter repo directory structures from a dict specification."""
 
+import ast
 import json
 import os
 from crewai.tools import BaseTool
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 OUTPUTS_DIR = os.path.join(os.path.dirname(__file__), "..", "outputs", "generated_code")
 
 
 class CodeScaffoldInput(BaseModel):
     repo_name: str = Field(description="Name of the root directory to create inside outputs/generated_code/")
-    structure: str = Field(
+    structure: dict = Field(
         description=(
-            "JSON string representing the directory structure. "
-            "Keys are file or folder paths relative to the repo root. "
-            "String values are written as file contents; null values create empty files. "
-            "Example: '{\"src/main.py\": \"# entrypoint\", \"README.md\": \"# Project\"}'"
+            "A JSON object mapping relative file paths to their string contents. "
+            "Keys are paths relative to the repo root; values are the file contents as strings. "
+            'Example: {"src/main.py": "# entrypoint", "README.md": "# Project"}'
         )
     )
+
+    @field_validator("structure", mode="before")
+    @classmethod
+    def coerce_structure(cls, v):
+        if isinstance(v, dict):
+            return v
+        if isinstance(v, str):
+            try:
+                parsed = json.loads(v)
+                if isinstance(parsed, dict):
+                    return parsed
+            except json.JSONDecodeError:
+                pass
+            try:
+                parsed = ast.literal_eval(v)
+                if isinstance(parsed, dict):
+                    return parsed
+            except (ValueError, SyntaxError):
+                pass
+            raise ValueError(f"Could not parse structure as JSON object: {v[:200]}")
+        raise ValueError(f"structure must be a dict or JSON string, got {type(v).__name__}")
 
 
 class CodeScaffoldTool(BaseTool):
     name: str = "code_scaffold_tool"
     description: str = (
-        "Creates a starter repository directory structure from a JSON specification. "
-        "Pass a repo_name and a JSON structure dict mapping relative file paths to their contents."
+        "Creates a starter repository directory structure. "
+        "Pass repo_name (string) and structure (a JSON object mapping file paths to their contents)."
     )
     args_schema: type[BaseModel] = CodeScaffoldInput
 
-    def _run(self, repo_name: str, structure: str) -> str:
-        try:
-            spec: dict = json.loads(structure)
-        except json.JSONDecodeError as e:
-            return f"Error parsing structure JSON: {e}"
+    def _run(self, repo_name: str, structure: dict) -> str:
+        if not isinstance(structure, dict):
+            return f"Error: structure must be a JSON object, got {type(structure).__name__}"
+        spec = structure
 
         try:
             root = os.path.join(OUTPUTS_DIR, repo_name)
