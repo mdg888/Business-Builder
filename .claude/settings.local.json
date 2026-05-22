@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(Get-ChildItem -Path . -Recurse -Exclude .venv -File)",
+      "Bash(Select-Object -ExpandProperty FullName)"
+    ]
+  }
+}
